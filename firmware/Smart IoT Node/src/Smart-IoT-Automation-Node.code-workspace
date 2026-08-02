@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"name": "ESP32-Control.",
+			"path": "C:/Users/SAM/Documents/PlatformIO/Projects/ESP32-Control."
+		},
+		{
+			"name": "Smart IoT Node",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
