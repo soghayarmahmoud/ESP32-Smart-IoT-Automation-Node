@@ -1,64 +1,70 @@
-<div align="center">
-  <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDQzYzU1aWRpdTFnYjdvdDFiaXVtNHZ0cXh1eDJqZ3BtcWh3OG9oayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/VbKLoZ52QgsO82GAJc/giphy.gif" alt="IoT Animation" width="150"/>
-  
-  # 🚀 Smart IoT Automation Node
-  
-  **A powerful, reliable, and open-source ESP32-based node for your home and industrial automation needs.**
-  
-  [![ESP32](https://img.shields.io/badge/ESP32-WROOM--32D-red?style=for-the-badge&logo=espressif)](https://www.espressif.com/)
-  [![EasyEDA](https://img.shields.io/badge/EasyEDA-Design-blue?style=for-the-badge&logo=altiumdesigner)](https://easyeda.com)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-  [![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)](#)
-</div>
+# Smart IoT Automation Node
 
----
+A professional-grade, ESP32-based automation platform that combines robust hardware engineering, embedded firmware, and a modern web interface into a single, extensible IoT system. The project is designed to bridge high-voltage appliance control with safe, isolated sensing and a future-ready software ecosystem.
 
-## 🌟 Overview
+## Project Overview
 
-The **Smart IoT Automation Node** is a highly versatile hardware platform designed to bridge the gap between physical appliances and the cloud. Built around the powerful **ESP32-WROOM-32D** module, it provides a stable environment with isolated I/O and direct relay control.
+The Smart IoT Automation Node is an end-to-end IoT solution intended for smart home automation, remote appliance control, and future industrial-style monitoring workflows. The current implementation focuses on a reliable hardware foundation with isolated I/O, relay control, and a software architecture that scales from local control to cloud connectivity and mobile-native experiences.
 
-Whether you're building a smart home ecosystem, remote monitoring stations, or industrial automation loops, this node acts as the perfect backbone.
+### Value Proposition
 
-### ✨ Key Features
-- **🧠 Dual-Core ESP32 Processor**: Built-in WiFi & Bluetooth (BLE).
-- **🛡️ Optoisolated Inputs**: Safe signal reading via the PC817 optocoupler.
-- **⚡ Power Control**: Direct control of external high-voltage/current devices via an onboard 5V Relay (SRD-05VDC-SL-C).
-- **🔌 Robust Power Management**: 5V to 3.3V regulation via the AMS1117-3.3 linear regulator for stable MCU operation.
-- **🛠️ Easy Integration**: Convenient terminal blocks (2-pin and 3-pin) for fast wiring.
+- Safe interaction with external electrical systems through an isolated input path.
+- Flexible control architecture suitable for home automation and prototyping environments.
+- A clean, modular foundation for firmware, web dashboards, and future mobile applications.
+- A portfolio-ready hardware and software stack aligned with modern IoT engineering practices.
 
----
-
-## 📁 Repository Structure
+## High-Level Architecture
 
 ```text
-├── pcb/                        # EasyEDA PCB design files (.json)
-├── sch/                        # EasyEDA Schematic files (.json)
-├── HARDWARE_DOCS.md            # Detailed schematic & BOM breakdown
-├── ROADMAP.md                  # Web App roadmap & Future Hardware versions
-└── README.md                   # This file
++---------------------+       +----------------------------+       +----------------------------+
+|  Hardware Layer     |       |  Firmware Layer            |       |  Software Layer            |
+|  - ESP32 MCU        | <-->  |  - Arduino / PlatformIO   | <-->  |  - Next.js Dashboard      |
+|  - Relay Output     |       |  - Web Server / MQTT      |       |  - TypeScript / Tailwind  |
+|  - Optoisolated I/O |       |  - GPIO Control           |       |  - Mobile App (Future)    |
++---------------------+       +----------------------------+       +----------------------------+
 ```
 
----
+## What Has Been Accomplished
 
-## 🚀 Getting Started (Hardware)
+The repository already contains the foundation for an engineered IoT node:
 
-This project is natively designed in **EasyEDA**. To view or modify the hardware:
+- A complete PCB schematic and board layout concept built in EasyEDA.
+- Manufacturing-related outputs including Gerber files and a BOM.
+- A hardware documentation set describing the relay driver, regulator network, optocoupler isolation path, and board layout philosophy.
+- A documented roadmap for web and mobile software expansion.
 
-1. Clone or download this repository.
-2. Open [EasyEDA](https://easyeda.com/editor) or the EasyEDA Desktop Client.
-3. Select **File > Open > EasyEDA...** and load the `.json` files from the `sch/` and `pcb/` directories.
+## Quick Start Guide
 
----
+### Hardware Setup
 
-## 📚 Documentation & Next Steps
+1. Review the schematic and PCB files in the hardware directory.
+2. Open the EasyEDA project files located in the hardware/sch and hardware/pcb folders.
+3. Verify the board connections for the ESP32 module, relay, regulator, and optocoupler input path.
+4. Prepare a 5V power source and connect the necessary terminal blocks for the relay and isolated input lines.
+5. Assemble the board and validate the relay and sensing behavior before connecting high-power loads.
 
-We are building a complete ecosystem around this hardware. Dive deeper into our documentation:
+### Software Setup
 
-- 📖 **[Hardware Documentation](./HARDWARE_DOCS.md)**: Explore the schematic breakdown, pin mappings, and BOM.
-- 🗺️ **[Project Roadmap](./ROADMAP.md)**: See our plans for the upcoming Web Dashboard, firmware support (MQTT/Home Assistant), and hardware V2.0.
+1. Install Visual Studio Code and the PlatformIO extension for firmware development.
+2. Prepare the ESP32 toolchain and open the firmware project directory when available.
+3. Install Node.js 20+ and use npm or pnpm to initialize the web dashboard project.
+4. Start the frontend locally with the Next.js development server and connect it to the ESP32 device over the configured network endpoint.
 
----
+## Technology Stack
 
-<div align="center">
-  <i>Designed with ❤️ for the Open-Source IoT Community.</i>
-</div>
+- ESP32-WROOM-32D for Wi-Fi, Bluetooth, and embedded control.
+- EasyEDA for schematic capture and PCB layout design.
+- C++ with the Arduino framework for firmware logic.
+- Next.js for the modern web dashboard experience.
+- TypeScript for scalable frontend development.
+- Tailwind CSS for rapid, responsive UI styling.
+
+## Documentation Set
+
+- [docs/HARDWARE_DESIGN.md](docs/HARDWARE_DESIGN.md) — Hardware layout, isolation design, and PCB implementation notes.
+- [docs/SOFTWARE_ARCHITECTURE.md](docs/SOFTWARE_ARCHITECTURE.md) — Firmware and frontend architecture strategy.
+- [docs/ROADMAP_AND_QA.md](docs/ROADMAP_AND_QA.md) — Delivery roadmap and quality assurance direction.
+
+## Project Status
+
+The project is currently in a strong foundation phase: hardware design and documentation are established, and the software ecosystem is being planned and expanded toward a polished, end-to-end product experience.
