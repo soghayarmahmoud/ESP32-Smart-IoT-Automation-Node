@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Aether Core — Real-time Smart IoT Automation Dashboard. Monitor climate, control devices, and view live ESP32 diagnostics.">
+  <title>Aether Core — Smart IoT Dashboard</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ============================================================
+       RESET & DESIGN TOKENS
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:        #0b0d14;
+      --bg-sidebar:     #0f111a;
+      --bg-card:        #141827;
+      --bg-card-hover:  #171c2e;
+      --bg-card-active: #122030;
+
+      --border:         rgba(255,255,255,0.055);
+      --border-active:  rgba(0,191,165,0.22);
+      --border-light:   rgba(255,255,255,0.1);
+
+      --text-primary:   #dde4f0;
+      --text-secondary: #5c6b80;
+      --text-muted:     #2e3848;
+
+      --cyan:    #00d4ff;
+      --teal:    #00bfa5;
+      --green:   #00e676;
+      --purple:  #a855f7;
+      --pink:    #ec4899;
+      --red:     #ef4444;
+      --amber:   #f59e0b;
+
+      --sidebar-w: 218px;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: var(--bg-base);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================================
+       APP SHELL
+       ============================================================ */
+    .app {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ============================================================
+       SIDEBAR
+       ============================================================ */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 22px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #00d4ff 0%, #a855f7 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(0,212,255,0.25);
+    }
+
+    .logo-name {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: var(--text-primary);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 13px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      transition: background 0.2s, color 0.2s;
+      user-select: none;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+
+    .nav-item.active {
+      background: rgba(255,255,255,0.07);
+      border-color: var(--border);
+      color: var(--text-primary);
+    }
+
+    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .sidebar-footer {
+      margin: 10px;
+      padding: 13px 15px;
+      border-radius: 12px;
+      background: rgba(0,230,118,0.05);
+      border: 1px solid rgba(0,230,118,0.13);
+    }
+
+    .footer-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 3px;
+    }
+
+    .status-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 7px var(--green);
+      flex-shrink: 0;
+      transition: background 0.4s, box-shadow 0.4s;
+      animation: pulse-glow 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.6; transform:scale(0.9); }
+    }
+
+    .footer-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      transition: color 0.4s;
+    }
+
+    .footer-sub {
+      font-size: 10px;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      padding-left: 15px;
+    }
+
+    /* ============================================================
+       MAIN SCROLL AREA
+       ============================================================ */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.08) transparent;
+    }
+
+    .main::-webkit-scrollbar { width: 4px; }
+    .main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    /* ============================================================
+       CONNECTION BANNER
+       ============================================================ */
+    .conn-banner {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 28px;
+      background: rgba(239,68,68,0.08);
+      border-bottom: 1px solid rgba(239,68,68,0.18);
+      font-size: 12px;
+      color: #f87171;
+      font-weight: 500;
+    }
+
+    .conn-banner.show { display: flex; }
+    .conn-banner a { font-weight: 700; cursor: pointer; text-decoration: underline; color: inherit; }
+
+    /* ============================================================
+       TOP BAR
+       ============================================================ */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 17px 30px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(11,13,20,0.88);
+      backdrop-filter: blur(14px);
+      z-index: 5;
+      flex-shrink: 0;
+    }
+
+    .topbar-greeting .welcome-txt {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .topbar-greeting .name-txt {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+
+    .clock-box { text-align: right; }
+    .clock-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1;
+    }
+    .clock-date { font-size: 9px; color: var(--text-secondary); margin-top: 3px; letter-spacing: 0.05em; }
+
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+    .icon-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.035);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+    }
+
+    .icon-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+
+    .notif-dot {
+      position: absolute; top: 7px; right: 7px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      border: 1.5px solid var(--bg-base);
+    }
+
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00d4ff, #a855f7);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: white;
+      cursor: pointer;
+    }
+
+    /* ============================================================
+       PAGE CONTENT
+       ============================================================ */
+    .page-body { padding: 26px 30px; flex: 1; }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .page-header-left { display: flex; flex-direction: column; gap: 5px; }
+
+    .online-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 9.5px; font-weight: 800;
+      letter-spacing: 0.18em;
+      color: var(--green);
+    }
+
+    .badge-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 7px var(--green);
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+
+    .page-title {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1;
+    }
+
+    .date-pill {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================================
+       MAIN GRID  [sensor col | device section]
+       ============================================================ */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 262px 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    /* ============================================================
+       BASE CARD
+       ============================================================ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      transition: border-color 0.3s;
+    }
+
+    .card:hover { border-color: rgba(255,255,255,0.09); }
+
+    /* ============================================================
+       SENSOR / GAUGE CARDS
+       ============================================================ */
+    .sensor-col { display: flex; flex-direction: column; gap: 14px; }
+
+    .gauge-card { padding: 22px 18px 18px; display: flex; flex-direction: column; }
+
+    .card-hd {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .card-title-grp { display: flex; align-items: center; gap: 9px; }
+
+    .card-ico {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: rgba(255,255,255,0.055);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    .card-title { font-size: 15px; font-weight: 600; }
+    .card-room  { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-secondary); }
+
+    /* SVG Gauge */
+    .gauge-wrap {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      padding: 6px 0;
+    }
+
+    .gauge-svg { width: 158px; height: 158px; }
+
+    .gauge-center {
+      position: absolute;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+
+    .gauge-val {
+      font-size: 34px; font-weight: 700;
+      letter-spacing: -0.04em; line-height: 1;
+    }
+
+    .gauge-sup { font-size: 17px; font-weight: 400; vertical-align: super; }
+
+    .gauge-lbl {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      color: var(--text-secondary); margin-top: 4px;
+    }
+
+    /* ============================================================
+       DEVICE SECTION
+       ============================================================ */
+    .device-section { display: flex; flex-direction: column; gap: 14px; }
+
+    .device-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .device-card {
+      padding: 18px 18px 16px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, background 0.35s;
+    }
+
+    .device-card::after {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 130px; height: 130px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,191,165,0.13), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    .device-card.active {
+      border-color: var(--border-active);
+      background: linear-gradient(145deg, #12202c 0%, #131e28 100%);
+    }
+
+    .device-card.active::after { opacity: 1; }
+
+    .dc-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .dc-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: rgba(255,255,255,0.055);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      transition: background 0.3s;
+    }
+
+    .device-card.active .dc-icon { background: rgba(0,191,165,0.14); }
+
+    .dc-name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 5px; }
+
+    .dc-status {
+      font-size: 9.5px; font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      transition: color 0.3s;
+    }
+
+    .dc-status.s-active  { color: var(--teal); }
+    .dc-status.s-offline { color: var(--text-muted); }
+
+    /* ============================================================
+       TOGGLE SWITCH
+       ============================================================ */
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 44px; height: 24px;
+      cursor: pointer;
+    }
+
+    .toggle input { opacity:0; width:0; height:0; position:absolute; }
+
+    .t-track {
+      position: absolute; inset: 0;
+      background: #1a2236;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.07);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .t-thumb {
+      position: absolute;
+      width: 18px; height: 18px;
+      top: 50%; left: 3px;
+      transform: translateY(-50%);
+      border-radius: 50%;
+      background: #4a5568;
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+    }
+
+    .toggle input:checked ~ .t-track {
+      background: var(--teal);
+      box-shadow: 0 0 14px rgba(0,191,165,0.5);
+      border-color: var(--teal);
+    }
+
+    .toggle input:checked ~ .t-thumb {
+      transform: translate(20px, -50%);
+      background: #fff;
+    }
+
+    /* ============================================================
+       POWER CHART CARD
+       ============================================================ */
+    .power-card { padding: 22px 22px 18px; }
+
+    .power-hd {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .power-title {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 15px; font-weight: 600;
+    }
+
+    .power-gem {
+      width: 10px; height: 10px; border-radius: 2px;
+      background: linear-gradient(135deg, #a855f7, #00d4ff);
+    }
+
+    .time-tabs {
+      display: flex; gap: 3px;
+      background: rgba(255,255,255,0.04);
+      padding: 3px; border-radius: 8px;
+    }
+
+    .t-tab {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: none; background: none;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.07em;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .t-tab.active { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+    .chart-wrap { height: 155px; margin-bottom: 18px; }
+
+    .power-stats {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .ps-label {
+      display: block;
+      font-size: 8.5px; font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .ps-val {
+      font-size: 21px; font-weight: 700;
+      letter-spacing: -0.025em; line-height: 1;
+    }
+
+    .ps-val.clr-green { color: var(--green); }
+
+    /* ============================================================
+       TERMINAL
+       ============================================================ */
+    .terminal-card { overflow: hidden; }
+
+    .term-bar {
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+    }
+
+    .term-dots { display: flex; gap: 5px; }
+    .td { width: 9px; height: 9px; border-radius: 50%; }
+    .td-r { background: #ff5f57; }
+    .td-y { background: #febc2e; }
+    .td-g { background: #28c840; }
+
+    .term-header-txt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      letter-spacing: 0.04em;
+    }
+
+    .term-body {
+      padding: 18px 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .t-row {
+      display: flex; align-items: center;
+      line-height: 2.1;
+    }
+
+    .t-key {
+      color: var(--text-secondary);
+      width: 105px;
+      flex-shrink: 0;
+    }
+
+    .t-key::before { content: '> '; color: var(--text-muted); }
+
+    .t-val { color: var(--text-primary); }
+    .t-val.c-online  { color: var(--green); font-weight: 500; }
+    .t-val.c-offline { color: var(--red); font-weight: 500; }
+    .t-val.c-ip      { color: var(--cyan); }
+    .t-val.c-sig     { color: #a78bfa; }
+
+    .t-ping-wrap { display: flex; align-items: center; gap: 10px; flex: 1; }
+
+    .ping-track {
+      width: 70px; height: 3px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .ping-fill {
+      height: 100%; width: 0%;
+      background: var(--green);
+      border-radius: 2px;
+    }
+
+    /* ============================================================
+       SETTINGS MODAL
+       ============================================================ */
+    .overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(10px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: #161c2c;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 30px;
+      width: 370px;
+      animation: modal-in 0.2s ease;
+    }
+
+    @keyframes modal-in {
+      from { opacity:0; transform:scale(0.96) translateY(8px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+
+    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 7px; }
+
+    .modal-sub {
+      font-size: 12.5px; color: var(--text-secondary);
+      line-height: 1.6; margin-bottom: 22px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .field-input {
+      width: 100%; padding: 11px 15px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      outline: none;
+      margin-bottom: 22px;
+      transition: border-color 0.2s;
+    }
+
+    .field-input:focus { border-color: var(--cyan); }
+
+    .field-hint {
+      font-size: 11px; color: var(--text-secondary);
+      margin-top: -16px; margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .btn {
+      padding: 10px 18px; border-radius: 10px;
+      font-size: 12.5px; font-weight: 700;
+      cursor: pointer; border: none;
+      font-family: 'Inter', sans-serif;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { background: rgba(255,255,255,0.09); }
+
+    .btn-cta {
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      color: #0b0d14;
+    }
+
+    .btn-cta:hover { transform: translateY(-1px); opacity: 0.92; }
+
+    /* ============================================================
+       MICRO-ANIMATIONS & ENTRY FADE
+       ============================================================ */
+    @keyframes fade-up {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .card { animation: fade-up 0.45s ease both; }
+    .sensor-col .card:nth-child(1) { animation-delay: 0.05s; }
+    .sensor-col .card:nth-child(2) { animation-delay: 0.10s; }
+    .device-grid .card:nth-child(1) { animation-delay: 0.12s; }
+    .device-grid .card:nth-child(2) { animation-delay: 0.17s; }
+    .device-grid .card:nth-child(3) { animation-delay: 0.22s; }
+    .device-grid .card:nth-child(4) { animation-delay: 0.27s; }
+    .power-card  { animation-delay: 0.30s; }
+    .terminal-card { animation-delay: 0.35s; }
+  </style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- ============================================================
+       SIDEBAR
+       ============================================================ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">✦</div>
+      <span class="logo-name">AETHER CORE</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-item active" id="nav-dashboard">
+        <!-- Dashboard icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="5" rx="1.5"/>
+          <rect x="14" y="12" width="7" height="9" rx="1.5"/>
+          <rect x="3" y="16" width="7" height="5" rx="1.5"/>
+        </svg>
+        DASHBOARD
+      </div>
+
+      <div class="nav-item" id="nav-analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6"  y1="20" x2="6"  y2="14"/>
+        </svg>
+        ANALYTICS
+      </div>
+
+      <div class="nav-item" id="nav-routines">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <polyline points="17 1 21 5 17 9"/>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        ROUTINES
+      </div>
+
+      <div class="nav-item" id="nav-settings" onclick="openSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        SETTINGS
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="footer-row">
+        <div class="status-pulse" id="conn-pulse"></div>
+        <span class="footer-label" id="footer-label">SYSTEM ONLINE</span>
+      </div>
+      <div class="footer-sub">V4.2.0 STABLE BUILD</div>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN AREA
+       ============================================================ -->
+  <main class="main">
+
+    <!-- Connection warning banner -->
+    <div class="conn-banner" id="conn-banner">
+      ⚠ ESP32 unreachable at <strong id="banner-ip">—</strong> —
+      <a onclick="openSettings()">Configure IP address</a> or check your Wi-Fi network.
+    </div>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-greeting">
+        <div class="welcome-txt">Welcome back,</div>
+        <div class="name-txt">Commander Alex</div>
+      </div>
+      <div class="topbar-right">
+        <div class="clock-box">
+          <div class="clock-time" id="clock-time">00:00:00</div>
+          <div class="clock-date" id="clock-date">MON, JAN 1, 2026</div>
+        </div>
+        <div class="topbar-actions">
+          <div class="icon-btn" title="Notifications" id="btn-notif">
+            <div class="notif-dot"></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </div>
+          <div class="avatar" title="Profile" id="btn-avatar">A</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE BODY -->
+    <div class="page-body">
+
+      <!-- Page header row -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="online-badge">
+            <div class="badge-dot" id="badge-dot"></div>
+            <span id="badge-text">CORE SYSTEMS ONLINE</span>
+          </div>
+          <h1 class="page-title">Main Command</h1>
+        </div>
+        <div class="date-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+          <span id="date-pill-text">SUN, AUG 4, 2026</span>
+        </div>
+      </div>
+
+      <!-- Main dashboard grid -->
+      <div class="main-grid">
+
+        <!-- ── LEFT: SENSOR COLUMN ── -->
+        <div class="sensor-col">
+
+          <!-- Climate gauge -->
+          <div class="card gauge-card">
+            <div class="card-hd">
+              <div class="card-title-grp">
+                <div class="card-ico">🌡️</div>
+                <span class="card-title">Climate</span>
+              </div>
+              <span class="card-room">LIVING ROOM</span>
+            </div>
+            <div class="gauge-wrap">
+              <svg class="gauge-svg" viewBox="0 0 200 200" id="svg-climate">
+                <defs>
+                  <linearGradient id="grad-climate" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%"   stop-color="#00bfa5"/>
+                    <stop offset="100%" stop-color="#00d4ff"/>
+                  </linearGradient>
+                </defs>
+                <!-- Track arc (270°) -->
+                <circle r="78" cx="100" cy="100"
+                  fill="none" stroke="#1c2438" stroke-width="8"
+                  stroke-dasharray="367.57 122.52"
+                  stroke-linecap="round"
+                  transform="rotate(135 100 100)"/>
+                <!-- Fill arc -->
+                <circle class="gauge-fill" r="78" cx="100" cy="100"
+                  fill="none" stroke="url(#grad-climate)" stroke-width="8"
+                  stroke-dasharray="0 490.09"
+                  stroke-linecap="round"
+                  transform="rotate(135 100 100)"
+                  style="transition: stroke-dasharray 1.1s cubic-bezier(0.4,0,0.2,1)"/>
+              </svg>
+              <div class="gauge-center">
+                <div class="gauge-val"><span id="val-temp">24</span><span class="gauge-sup">°</span></div>
+                <div class="gauge-lbl">OPTIMAL</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Humidity gauge -->
+          <div class="card gauge-card">
+            <div class="card-hd">
+              <div class="card-title-grp">
+                <div class="card-ico">💧</div>
+                <span class="card-title">Humidity</span>
+              </div>
+              <span class="card-room">LIVING ROOM</span>
+            </div>
+            <div class="gauge-wrap">
+              <svg class="gauge-svg" viewBox="0 0 200 200" id="svg-humidity">
+                <defs>
+                  <linearGradient id="grad-humid" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%"   stop-color="#c084fc"/>
+                    <stop offset="100%" stop-color="#ec4899"/>
+                  </linearGradient>
+                </defs>
+                <circle r="78" cx="100" cy="100"
+                  fill="none" stroke="#1c2438" stroke-width="8"
+                  stroke-dasharray="367.57 122.52"
+                  stroke-linecap="round"
+                  transform="rotate(135 100 100)"/>
+                <circle class="gauge-fill" r="78" cx="100" cy="100"
+                  fill="none" stroke="url(#grad-humid)" stroke-width="8"
+                  stroke-dasharray="0 490.09"
+                  stroke-linecap="round"
+                  transform="rotate(135 100 100)"
+                  style="transition: stroke-dasharray 1.1s cubic-bezier(0.4,0,0.2,1)"/>
+              </svg>
+              <div class="gauge-center">
+                <div class="gauge-val"><span id="val-humidity">45</span><span class="gauge-sup">%</span></div>
+                <div class="gauge-lbl">STABLE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── RIGHT: DEVICE SECTION ── -->
+        <div class="device-section">
+
+          <!-- 2×2 Device Grid -->
+          <div class="device-grid">
+
+            <!-- Main Light — REAL relay -->
+            <div class="card device-card" id="card-mainLight" onclick="toggleDevice('mainLight')">
+              <div class="dc-top">
+                <div class="dc-icon">💡</div>
+                <label class="toggle" onclick="event.stopPropagation();event.preventDefault();toggleDevice('mainLight')">
+                  <input type="checkbox" id="chk-mainLight">
+                  <span class="t-track"></span>
+                  <span class="t-thumb"></span>
+                </label>
+              </div>
+              <div class="dc-name">Main Light</div>
+              <div class="dc-status" id="dcs-mainLight">INTENSITY: 0%</div>
+            </div>
+
+            <!-- PC Station — simulated -->
+            <div class="card device-card" id="card-pcStation" onclick="toggleDevice('pcStation')">
+              <div class="dc-top">
+                <div class="dc-icon">🖥️</div>
+                <label class="toggle" onclick="event.stopPropagation();event.preventDefault();toggleDevice('pcStation')">
+                  <input type="checkbox" id="chk-pcStation">
+                  <span class="t-track"></span>
+                  <span class="t-thumb"></span>
+                </label>
+              </div>
+              <div class="dc-name">PC Station</div>
+              <div class="dc-status s-offline" id="dcs-pcStation">OFFLINE</div>
+            </div>
+
+            <!-- AC Unit — simulated (starts ON) -->
+            <div class="card device-card active" id="card-acUnit" onclick="toggleDevice('acUnit')">
+              <div class="dc-top">
+                <div class="dc-icon">❄️</div>
+                <label class="toggle" onclick="event.stopPropagation();event.preventDefault();toggleDevice('acUnit')">
+                  <input type="checkbox" id="chk-acUnit" checked>
+                  <span class="t-track"></span>
+                  <span class="t-thumb"></span>
+                </label>
+              </div>
+              <div class="dc-name">AC Unit</div>
+              <div class="dc-status s-active" id="dcs-acUnit">COOLING: 22°C</div>
+            </div>
+
+            <!-- Ceiling Fan — simulated -->
+            <div class="card device-card" id="card-ceilingFan" onclick="toggleDevice('ceilingFan')">
+              <div class="dc-top">
+                <div class="dc-icon">🌀</div>
+                <label class="toggle" onclick="event.stopPropagation();event.preventDefault();toggleDevice('ceilingFan')">
+                  <input type="checkbox" id="chk-ceilingFan">
+                  <span class="t-track"></span>
+                  <span class="t-thumb"></span>
+                </label>
+              </div>
+              <div class="dc-name">Ceiling Fan</div>
+              <div class="dc-status" id="dcs-ceilingFan">STANDBY</div>
+            </div>
+          </div><!-- /device-grid -->
+
+          <!-- Power Consumption Chart -->
+          <div class="card power-card">
+            <div class="power-hd">
+              <div class="power-title">
+                <div class="power-gem"></div>
+                Power Consumption
+              </div>
+              <div class="time-tabs">
+                <button class="t-tab" id="tab-1h"  onclick="switchTab('1h')">1H</button>
+                <button class="t-tab active" id="tab-24h" onclick="switchTab('24h')">24H</button>
+                <button class="t-tab" id="tab-7d"  onclick="switchTab('7d')">7D</button>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="powerChart"></canvas>
+            </div>
+            <div class="power-stats">
+              <div>
+                <span class="ps-label">Current Load</span>
+                <div class="ps-val" id="ps-load">1.2 kW</div>
+              </div>
+              <div>
+                <span class="ps-label">Daily Total</span>
+                <div class="ps-val" id="ps-daily">14.5 kWh</div>
+              </div>
+              <div>
+                <span class="ps-label">Est. Cost</span>
+                <div class="ps-val" id="ps-cost">$3.42</div>
+              </div>
+              <div>
+                <span class="ps-label">Carbon Offset</span>
+                <div class="ps-val clr-green" id="ps-carbon">2.1 kg</div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /device-section -->
+      </div><!-- /main-grid -->
+
+      <!-- Terminal -->
+      <div class="card terminal-card">
+        <div class="term-bar">
+          <div class="term-dots">
+            <div class="td td-r"></div>
+            <div class="td td-y"></div>
+            <div class="td td-g"></div>
+          </div>
+          <span class="term-header-txt">sys_monitor_d / ESP32_NODE_01</span>
+        </div>
+        <div class="term-body">
+          <div class="t-row">
+            <span class="t-key">status</span>
+            <span class="t-val c-online" id="t-status">ONLINE</span>
+          </div>
+          <div class="t-row">
+            <span class="t-key">uptime</span>
+            <span class="t-val" id="t-uptime">—</span>
+          </div>
+          <div class="t-row">
+            <span class="t-key">ip_addr</span>
+            <span class="t-val c-ip" id="t-ip">—</span>
+          </div>
+          <div class="t-row">
+            <span class="t-key">signal_dbm</span>
+            <span class="t-val c-sig" id="t-signal">—</span>
+          </div>
+          <div class="t-row">
+            <span class="t-key">mem_free</span>
+            <span class="t-val" id="t-mem">—</span>
+          </div>
+          <div class="t-row">
+            <span class="t-key">ping</span>
+            <div class="t-ping-wrap">
+              <span class="t-val" id="t-ping">—</span>
+              <div class="ping-track">
+                <div class="ping-fill" id="ping-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-body -->
+  </main>
+</div><!-- /app -->
+
+<!-- ============================================================
+     SETTINGS MODAL
+     ============================================================ -->
+<div class="overlay" id="modal-overlay">
+  <div class="modal" id="modal-box">
+    <div class="modal-title">⚙ ESP32 Connection</div>
+    <div class="modal-sub">
+      Enter the IP address of your ESP32 device.<br>
+      Check the <strong>Serial Monitor</strong> (115200 baud) after flashing the firmware — it prints the IP on startup.
+    </div>
+    <label class="field-label" for="ip-input">ESP32 IP Address</label>
+    <input class="field-input" id="ip-input" type="text" placeholder="192.168.1.104" spellcheck="false" autocomplete="off">
+    <p class="field-hint">Make sure your computer and ESP32 are on the same Wi-Fi network. Serve this file via a local HTTP server (e.g. <code>python -m http.server 8080</code>) for best CORS compatibility.</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-cta" onclick="saveSettings()">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+  'use strict';
+
+  /* ─── Configuration ─────────────────────────────────── */
+  let ESP32_IP  = localStorage.getItem('aether_esp32_ip') || '';
+  const POLL_MS = 3000;
+
+  /* ─── Device state map ───────────────────────────────── */
+  // mainLight is the real relay; others are UI-simulated
+  const dev = {
+    mainLight:  false,
+    pcStation:  false,
+    acUnit:     true,
+    ceilingFan: false,
+  };
+
+  /* ─── Gauge math ─────────────────────────────────────── */
+  // Circle r=78, circumference = 2π×78 = 490.09
+  // 270° arc = 0.75 × 490.09 = 367.57
+  const R = 78;
+  const CIRC = 2 * Math.PI * R;          // 490.09
+  const ARC  = 0.75 * CIRC;              // 367.57  (270° track length)
+
+  function setGauge(svgId, value, min, max) {
+    const svg  = document.getElementById(svgId);
+    if (!svg) return;
+    const fill = svg.querySelector('.gauge-fill');
+    const pct  = Math.max(0, Math.min(1, (value - min) / (max - min)));
+    const f    = (pct * ARC).toFixed(2);
+    const g    = (CIRC - f).toFixed(2);
+    fill.setAttribute('stroke-dasharray', `${f} ${g}`);
+  }
+
+  /* ─── Clock ──────────────────────────────────────────── */
+  function tickClock() {
+    const now = new Date();
+    const t   = now.toLocaleTimeString('en-GB', { hour12: false });
+    const d   = now.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    }).toUpperCase();
+    document.getElementById('clock-time').textContent = t;
+    document.getElementById('clock-date').textContent = d;
+    document.getElementById('date-pill-text').textContent = d;
+  }
+
+  /* ─── Device toggle ─────────────────────────────────── */
+  function toggleDevice(id) {
+    const next = !dev[id];
+
+    if (id === 'mainLight') {
+      if (!ESP32_IP) { openSettings(); return; }
+
+      fetch(`http://${ESP32_IP}/api/relay`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ state: next }),
+        signal:  AbortSignal.timeout(3000),
+      })
+      .then(r => r.json())
+      .then(data => {
+        dev.mainLight = (data.state === true || data.state === 'ON');
+        renderDevice('mainLight');
+      })
+      .catch(() => {
+        // Optimistic update — show feedback even if response fails
+        dev.mainLight = next;
+        renderDevice('mainLight');
+      });
+
+    } else {
+      dev[id] = next;
+      renderDevice(id);
+    }
+  }
+
+  function renderDevice(id) {
+    const on      = dev[id];
+    const card    = document.getElementById(`card-${id}`);
+    const chk     = document.getElementById(`chk-${id}`);
+    const statusEl = document.getElementById(`dcs-${id}`);
+
+    if (chk) chk.checked = on;
+    if (card) card.classList.toggle('active', on);
+
+    if (!statusEl) return;
+    const labels = {
+      mainLight:  [on ? 'INTENSITY: 85%' : 'INTENSITY: 0%',  on ? 's-active' : ''],
+      pcStation:  [on ? 'RUNNING'  : 'OFFLINE',              on ? 's-active' : 's-offline'],
+      acUnit:     [on ? 'COOLING: 22°C' : 'STANDBY',         on ? 's-active' : ''],
+      ceilingFan: [on ? 'SPEED: 60%'    : 'STANDBY',         on ? 's-active' : ''],
+    };
+    const [text, cls] = labels[id] || ['—', ''];
+    statusEl.textContent = text;
+    statusEl.className   = `dc-status ${cls}`.trim();
+  }
+
+  /* ─── ESP32 Polling ─────────────────────────────────── */
+  async function poll() {
+    if (!ESP32_IP) { setConnected(false, 'NO_IP'); return; }
+
+    const t0 = Date.now();
+    try {
+      const res  = await fetch(`http://${ESP32_IP}/api/status`, {
+        signal: AbortSignal.timeout(2500),
+      });
+      const data = await res.json();
+      const ms   = Date.now() - t0;
+
+      setConnected(true);
+      applyESP32Data(data, ms);
+    } catch {
+      setConnected(false, 'UNREACHABLE');
+    }
+  }
+
+  function applyESP32Data(d, pingMs) {
+    // Terminal
+    const tStatus = document.getElementById('t-status');
+    tStatus.textContent = d.status || 'ONLINE';
+    tStatus.className   = 't-val c-online';
+
+    document.getElementById('t-uptime').textContent = d.uptime  || '—';
+    document.getElementById('t-ip').textContent     = d.ip_addr || ESP32_IP;
+
+    const rssi    = d.signal_dbm ?? 0;
+    const quality = rssi > -50 ? 'Excellent' : rssi > -65 ? 'Good' : rssi > -75 ? 'Fair' : 'Weak';
+    document.getElementById('t-signal').textContent =
+      `${rssi} dBm (${quality})`;
+
+    const free  = d.mem_free  ?? 0;
+    const total = d.mem_total ?? 320;
+    document.getElementById('t-mem').textContent  = `${free} KB / ${total} KB`;
+    document.getElementById('t-ping').textContent = `${pingMs}ms`;
+
+    // Sync relay state from ESP32
+    if (typeof d.relay_state === 'boolean') {
+      dev.mainLight = d.relay_state;
+      renderDevice('mainLight');
+    }
+
+    // Update gauges
+    if (d.temperature != null) {
+      document.getElementById('val-temp').textContent = Math.round(d.temperature);
+      setGauge('svg-climate', d.temperature, 0, 50);
+    }
+    if (d.humidity != null) {
+      document.getElementById('val-humidity').textContent = Math.round(d.humidity);
+      setGauge('svg-humidity', d.humidity, 0, 100);
+    }
+  }
+
+  function setConnected(ok, reason) {
+    const pulse   = document.getElementById('conn-pulse');
+    const flabel  = document.getElementById('footer-label');
+    const badgeDot= document.getElementById('badge-dot');
+    const badgeTxt= document.getElementById('badge-text');
+    const banner  = document.getElementById('conn-banner');
+
+    if (ok) {
+      const c = 'var(--green)';
+      pulse.style.cssText   = `background:${c};box-shadow:0 0 7px ${c}`;
+      flabel.style.color    = c;
+      flabel.textContent    = 'SYSTEM ONLINE';
+      badgeDot.style.cssText= `background:${c};box-shadow:0 0 7px ${c}`;
+      badgeTxt.textContent  = 'CORE SYSTEMS ONLINE';
+      banner.classList.remove('show');
+      kickPingAnim();
+    } else {
+      const c = reason === 'NO_IP' ? 'var(--amber)' : 'var(--red)';
+      pulse.style.cssText   = `background:${c};box-shadow:0 0 7px ${c}`;
+      flabel.style.color    = c;
+      flabel.textContent    = reason === 'NO_IP' ? 'AWAITING CONFIG' : 'SYSTEM OFFLINE';
+      badgeDot.style.cssText= `background:${c};box-shadow:0 0 7px ${c}`;
+      badgeTxt.textContent  = reason === 'NO_IP' ? 'ESP32 IP NOT SET' : 'ESP32 UNREACHABLE';
+
+      if (reason !== 'NO_IP') {
+        document.getElementById('banner-ip').textContent = ESP32_IP;
+        banner.classList.add('show');
+      } else {
+        banner.classList.remove('show');
+      }
+
+      const ts = document.getElementById('t-status');
+      ts.textContent = 'OFFLINE';
+      ts.className   = 't-val c-offline';
+    }
+  }
+
+  /* ─── Ping bar animation ────────────────────────────── */
+  let pingRaf = null;
+
+  function kickPingAnim() {
+    cancelAnimationFrame(pingRaf);
+    const fill = document.getElementById('ping-fill');
+    let w = 0;
+
+    const step = () => {
+      w = Math.min(w + 2.5, 100);
+      fill.style.width = w + '%';
+      if (w < 100) {
+        pingRaf = requestAnimationFrame(step);
+      } else {
+        setTimeout(() => {
+          fill.style.transition = 'none';
+          fill.style.width = '0%';
+          setTimeout(() => { fill.style.transition = ''; }, 80);
+        }, 450);
+      }
+    };
+
+    pingRaf = requestAnimationFrame(step);
+  }
+
+  /* ─── Power chart ───────────────────────────────────── */
+  let chart = null;
+
+  function buildData(tab) {
+    const now    = new Date();
+    const labels = [];
+    const vals   = [];
+
+    if (tab === '1h') {
+      for (let i = 59; i >= 0; i--) {
+        labels.push(i % 15 === 0 ? `-${i}m` : '');
+        vals.push(Math.max(0.3, 1.2 + (Math.random() - 0.5) * 0.7));
+      }
+    } else if (tab === '24h') {
+      for (let i = 23; i >= 0; i--) {
+        const hr   = (now.getHours() - i + 24) % 24;
+        const base = (hr >= 6 && hr <= 22) ? 1.5 : 0.7;
+        labels.push(i % 6 === 0 ? `${hr}:00` : '');
+        vals.push(Math.max(0.2, base + (Math.random() - 0.5) * 0.5 + Math.sin(hr * Math.PI / 12) * 0.4));
+      }
+    } else {
+      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now); d.setDate(now.getDate() - i);
+        labels.push(days[d.getDay()]);
+        vals.push(Math.max(6, 14 + (Math.random() - 0.5) * 9));
+      }
+    }
+    return { labels, vals };
+  }
+
+  function initChart() {
+    const canvas = document.getElementById('powerChart');
+    const ctx    = canvas.getContext('2d');
+    const { labels, vals } = buildData('24h');
+
+    const grad = ctx.createLinearGradient(0, 0, 0, 155);
+    grad.addColorStop(0,   'rgba(168,85,247,0.38)');
+    grad.addColorStop(0.55,'rgba(0,212,255,0.10)');
+    grad.addColorStop(1,   'rgba(0,212,255,0.00)');
+
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: vals,
+          fill: true,
+          backgroundColor: grad,
+          borderColor: 'rgba(0,212,255,0.85)',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#00d4ff',
+          tension: 0.45,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 700, easing: 'easeInOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(20,24,40,0.96)',
+            borderColor: 'rgba(0,212,255,0.25)',
+            borderWidth: 1,
+            titleColor: '#5c6b80',
+            bodyColor: '#dde4f0',
+            padding: 10,
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.y.toFixed(2)} kW`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: '#2e3848',
+              font: { size: 9, family: 'JetBrains Mono' },
+              maxRotation: 0,
+            },
+          },
+          y: { display: false, min: 0 },
+        },
+      },
+    });
+  }
+
+  let activeTab = '24h';
+  function switchTab(tab) {
+    if (tab === activeTab) return;
+    activeTab = tab;
+    document.querySelectorAll('.t-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    const { labels, vals } = buildData(tab);
+    chart.data.labels              = labels;
+    chart.data.datasets[0].data   = vals;
+    chart.update();
+  }
+
+  /* ─── Settings modal ────────────────────────────────── */
+  function openSettings() {
+    document.getElementById('ip-input').value = ESP32_IP;
+    document.getElementById('modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('ip-input').focus(), 60);
+  }
+
+  function closeSettings() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  function saveSettings() {
+    const ip = document.getElementById('ip-input').value.trim();
+    if (!ip) return;
+    ESP32_IP = ip;
+    localStorage.setItem('aether_esp32_ip', ip);
+    closeSettings();
+    poll();
+  }
+
+  /* ─── Sidebar nav click highlight ──────────────────── */
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+
+  /* ─── Modal close on backdrop click ────────────────── */
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSettings();
+  });
+
+  document.getElementById('ip-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveSettings();
+  });
+
+  /* ─── Boot ──────────────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', () => {
+    // Clock
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    // Initial gauge defaults (before first poll)
+    setTimeout(() => {
+      setGauge('svg-climate',  24, 0, 50);
+      setGauge('svg-humidity', 45, 0, 100);
+    }, 250);
+
+    // Render initial device states
+    Object.keys(dev).forEach(renderDevice);
+
+    // Chart
+    initChart();
+
+    // Poll immediately then on interval
+    poll();
+    setInterval(poll, POLL_MS);
+
+    // Show settings modal if no IP is stored
+    if (!ESP32_IP) setTimeout(openSettings, 900);
+  });
+</script>
+</body>
+</html>
